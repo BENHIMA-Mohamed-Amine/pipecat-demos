@@ -1,0 +1,14 @@
+[project]
+name = "simple-pipecat-bot"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pipecat-ai[groq,runner,silero,webrtc]>=0.0.103",
+    "python-dotenv>=1.2.1",
+]
+
+
+[tool.ruff.lint]
+select = ["I"]
