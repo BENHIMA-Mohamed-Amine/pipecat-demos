@@ -51,8 +51,8 @@ Microphone
 
 ```bash
 # 1. Clone
-git clone https://github.com/<your-username>/simple-pipecat-bot.git
-cd simple-pipecat-bot
+git clone https://github.com/BENHIMA-Mohamed-Amine/pipecat-demos.git
+cd pipecat-demos
 
 # 2. Install dependencies
 uv sync
