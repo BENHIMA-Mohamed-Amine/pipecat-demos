@@ -1,12 +1,14 @@
 [project]
 name = "simple-pipecat-bot"
 version = "0.1.0"
-description = "Add your description here"
+description = "pipecat-demos"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "pipecat-ai[groq,runner,silero,webrtc]>=0.0.103",
-    "python-dotenv>=1.2.1",
+    "fastapi>=0.135.0",
+    "pipecat-ai[google,silero,webrtc]>=0.0.103",
+    "pydantic-settings>=2.13.1",
+    "uvicorn>=0.41.0",
 ]
 
 
