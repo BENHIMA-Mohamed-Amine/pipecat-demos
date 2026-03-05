@@ -25,4 +25,4 @@ async def serve_index():
 
 
 if __name__ == "__main__":
-    uvicorn.run(app="app.main:app", port=3000, host="0.0.0.0", reload=True)
+    uvicorn.run(app="app.main:app", port=3000, host="localhost", reload=True)
