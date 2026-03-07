@@ -9,7 +9,7 @@ from pipecat.processors.aggregators.llm_response_universal import (
     LLMUserAggregatorParams,
 )
 from pipecat.services.nvidia.llm import NvidiaLLMService
-from pipecat.services.nvidia.stt import NvidiaSTTService
+from pipecat.services.nvidia.stt import NvidiaSegmentedSTTService, NvidiaSTTService
 from pipecat.services.nvidia.tts import NvidiaTTSService as _NvidiaTTSService
 from pipecat.transcriptions.language import Language
 from pipecat.turns.user_mute import FirstSpeechUserMuteStrategy
@@ -42,8 +42,24 @@ class PipecatServiceFactory:
         # a matching model — this is NOT a pipecat bug. Confirmed via raw gRPC test that bypasses
         # pipecat entirely (see tests/test_nvidia_asr_all_languages.py). To use other languages,
         # you would need to self-host the NIM container (nvcr.io/nim/nvidia/parakeet-1-1b-rnnt-multilingual).
-        stt = NvidiaSTTService(
+        # stt = NvidiaSTTService(
+        #     api_key=self.secrets.nvidia_api_key,
+        #     # model_function_map={
+        #     #     "model_name": "whisper-large-v3",
+        #     #     "function_id": "b702f636-f60c-4a3d-a6f4-f3568c13bd7d",
+        #     # },
+        #     params=NvidiaSTTService.InputParams(language=Language.EN_US)
+        # )
+
+        # I used whisper large for multilanguage support
+        # It's slow and not real time streaming but that's the only option we have for nvidia right now until it fixes the bug.
+        stt = NvidiaSegmentedSTTService(
             api_key=self.secrets.nvidia_api_key,
+            model_function_map={
+                "model_name": "whisper-large-v3",
+                "function_id": "b702f636-f60c-4a3d-a6f4-f3568c13bd7d",
+            },
+            params=NvidiaSegmentedSTTService.InputParams(language=Language.FR_FR)
         )
 
         return stt
@@ -52,7 +68,7 @@ class PipecatServiceFactory:
         tts = NvidiaTTSService(
             api_key=self.secrets.nvidia_api_key,
             voice_id="Magpie-Multilingual.EN-US.Isabela",  # https://docs.nvidia.com/nim/riva/tts/latest/support-matrix.html
-            params=NvidiaTTSService.InputParams(language=Language.EN_US, quality=60),
+            params=NvidiaTTSService.InputParams(language=Language.FR_FR, quality=60),
         )
 
         return tts
