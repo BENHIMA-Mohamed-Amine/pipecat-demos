@@ -1,21 +1,16 @@
 from pipecat.audio.turn.smart_turn.local_smart_turn_v3 import LocalSmartTurnAnalyzerV3
 from pipecat.audio.vad.silero import SileroVADAnalyzer
+from pipecat.frames.frames import LLMMessagesAppendFrame
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.aggregators.llm_response_universal import (
     LLMAssistantAggregatorParams,
     LLMContextAggregatorPair,
+    LLMUserAggregator,
     LLMUserAggregatorParams,
 )
 from pipecat.services.nvidia.llm import NvidiaLLMService
 from pipecat.services.nvidia.stt import NvidiaSTTService
 from pipecat.services.nvidia.tts import NvidiaTTSService as _NvidiaTTSService
-
-
-class NvidiaTTSService(_NvidiaTTSService):
-    def can_generate_metrics(self) -> bool:
-        return True
-
-
 from pipecat.transcriptions.language import Language
 from pipecat.turns.user_mute import FirstSpeechUserMuteStrategy
 from pipecat.turns.user_start import (
@@ -26,7 +21,13 @@ from pipecat.turns.user_stop import TurnAnalyzerUserTurnStopStrategy
 from pipecat.turns.user_turn_strategies import UserTurnStrategies
 
 from app.core.secrets import Settings
+from app.core.types import ContextAggregatorBundle
 from app.pipeline.config import BotConfig
+
+
+class NvidiaTTSService(_NvidiaTTSService):
+    def can_generate_metrics(self) -> bool:
+        return True
 
 
 class PipecatServiceFactory:
@@ -81,10 +82,23 @@ class PipecatServiceFactory:
                     ],
                 ),
                 user_mute_strategies=[FirstSpeechUserMuteStrategy()],
+                user_idle_timeout=60,
             ),
             assistant_params=LLMAssistantAggregatorParams(),
         )
-        return (
-            pair,
-            context,
-        )  # returns ((user_aggregator, assistant_aggregator), context)
+
+        @pair.user().event_handler("on_user_turn_idle")
+        async def hook_user(aggregator: LLMUserAggregator):
+            await aggregator.push_frame(
+                LLMMessagesAppendFrame(
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": "The user has been idle. Gently remind them you're here to help.",
+                        }
+                    ],
+                    run_llm=True
+                )
+            )
+
+        return ContextAggregatorBundle(pair, context)

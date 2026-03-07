@@ -12,7 +12,9 @@ class VoicePipelineBuilder:
         stt = self.factory.create_stt()
         llm = self.factory.create_agent()
         tts = self.factory.create_tts()
-        aggregators, context = self.factory.create_context_agg()
+        context_aggregator_bundle = self.factory.create_context_agg()
+        aggregators = context_aggregator_bundle.pair
+        context = context_aggregator_bundle.context
         user_agg, assistant_agg = aggregators
         pipeline = Pipeline(
             [
