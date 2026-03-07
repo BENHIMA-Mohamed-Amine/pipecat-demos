@@ -7,9 +7,13 @@ from pipecat.transports.smallwebrtc.request_handler import (
 )
 from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
 
-from app.core.contracts import WebRTCAnswer
 from app.core.dependencies import get_handler
-from app.pipeline.bot import run_bot
+from app.core.schemas import WebRTCAnswer
+from app.core.secrets import secrets
+from app.pipeline.bot import VoiceBot
+from app.pipeline.config import BotConfig
+from app.pipeline.factory import PipecatServiceFactory
+from app.pipeline.pipeline import VoicePipelineBuilder
 
 router = APIRouter(prefix="/api", tags=["webrtc"])
 
@@ -20,6 +24,9 @@ async def offer(
     background_tasks: BackgroundTasks,
     small_webrtc_handler: SmallWebRTCRequestHandler = Depends(get_handler),
 ) -> WebRTCAnswer:
+    bot_config = BotConfig()
+    pipe_builder = VoicePipelineBuilder(PipecatServiceFactory(secrets, bot_config))
+
     async def webrtc_connection_callback(connection):
         webrtc_transport = SmallWebRTCTransport(
             webrtc_connection=connection,
@@ -27,7 +34,8 @@ async def offer(
                 audio_in_enabled=True, audio_out_enabled=True, audio_out_10ms_chunks=2
             ),
         )
-        background_tasks.add_task(run_bot, webrtc_transport)
+        bot = VoiceBot(webrtc_transport, pipe_builder, bot_config)
+        background_tasks.add_task(bot.run)
 
     answer = await small_webrtc_handler.handle_web_request(
         request=request, webrtc_connection_callback=webrtc_connection_callback
