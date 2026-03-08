@@ -1,5 +1,12 @@
 # simple-pipecat-bot
 
+> **This repo is a growing collection of Pipecat demos — check the branches for different integrations and use cases.**
+> Each branch is a standalone, runnable example. Topics covered include (or planned): NVIDIA NIM, FastAPI + Gemini Live, LangChain integration, agentic workflows with Pipecat Flows, RAG pipelines, custom self-hosted STT/LLM/TTS services, and real-time avatar agents.
+
+> **Blog post:** [I Built a Real-Time Voice AI Agent in ~90 Lines of Python](https://dev.to/mohamedamine_benhima/i-built-a-real-time-voice-ai-agent-in-90-lines-of-python-2fbk)
+
+---
+
 A minimal voice AI bot built with [Pipecat](https://github.com/pipecat-ai/pipecat). It runs a real-time speech-to-speech pipeline entirely through **Groq** (STT + LLM + TTS) over a **WebRTC** transport with **Silero VAD** for voice activity detection.
 
 This is a quick-start reference — the smallest working Pipecat bot you can run locally.
@@ -116,8 +123,3 @@ The bot will:
 | TTS voice | `GroqTTSService(voice=...)` |
 | Enable/disable metrics | `PipelineParams(enable_metrics=...)` |
 
----
-
-## License
-
-MIT

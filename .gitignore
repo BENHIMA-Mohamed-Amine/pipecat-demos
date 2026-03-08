@@ -12,3 +12,9 @@ wheels/
 .env
 
 .ruff_cache
+
+.claude
+
+blog.md
+
+blog-post.md
