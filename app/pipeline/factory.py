@@ -1,14 +1,13 @@
+from langchain.agents import AgentState
+from langchain_core.runnables import Runnable
 from pipecat.audio.turn.smart_turn.local_smart_turn_v3 import LocalSmartTurnAnalyzerV3
 from pipecat.audio.vad.silero import SileroVADAnalyzer
-from pipecat.frames.frames import LLMMessagesAppendFrame
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.aggregators.llm_response_universal import (
     LLMAssistantAggregatorParams,
     LLMContextAggregatorPair,
-    LLMUserAggregator,
     LLMUserAggregatorParams,
 )
-from pipecat.services.nvidia.llm import NvidiaLLMService
 from pipecat.services.nvidia.stt import NvidiaSegmentedSTTService, NvidiaSTTService
 from pipecat.services.nvidia.tts import NvidiaTTSService as _NvidiaTTSService
 from pipecat.transcriptions.language import Language
@@ -22,7 +21,7 @@ from pipecat.turns.user_turn_strategies import UserTurnStrategies
 
 from app.core.secrets import Settings
 from app.core.types import ContextAggregatorBundle
-from app.pipeline.config import BotConfig
+from app.services.langchain_processor import LangchainProcessor
 
 
 class NvidiaTTSService(_NvidiaTTSService):
@@ -31,35 +30,14 @@ class NvidiaTTSService(_NvidiaTTSService):
 
 
 class PipecatServiceFactory:
-    def __init__(self, secrets: Settings, bot_config: BotConfig):
+    def __init__(self, secrets: Settings):
         self.secrets = secrets
-        self.config = bot_config
 
-    def create_stt(self) -> NvidiaSTTService:
-        # NOTE: Only en-US works on the NVCF hosted endpoint for both streaming and offline modes.
-        # fr-FR, es-ES and other languages are rejected with INVALID_ARGUMENT by NVIDIA's cloud.
-        # Root cause: NVIDIA's NVCF endpoint truncates "fr-FR" to "fr" internally and fails to find
-        # a matching model — this is NOT a pipecat bug. Confirmed via raw gRPC test that bypasses
-        # pipecat entirely (see tests/test_nvidia_asr_all_languages.py). To use other languages,
-        # you would need to self-host the NIM container (nvcr.io/nim/nvidia/parakeet-1-1b-rnnt-multilingual).
-        # stt = NvidiaSTTService(
-        #     api_key=self.secrets.nvidia_api_key,
-        #     # model_function_map={
-        #     #     "model_name": "whisper-large-v3",
-        #     #     "function_id": "b702f636-f60c-4a3d-a6f4-f3568c13bd7d",
-        #     # },
-        #     params=NvidiaSTTService.InputParams(language=Language.EN_US)
-        # )
+    def create_stt(self) -> NvidiaSegmentedSTTService:
 
-        # I used whisper large for multilanguage support
-        # It's slow and not real time streaming but that's the only option we have for nvidia right now until it fixes the bug.
-        stt = NvidiaSegmentedSTTService(
+        stt = NvidiaSTTService(
             api_key=self.secrets.nvidia_api_key,
-            model_function_map={
-                "model_name": "whisper-large-v3",
-                "function_id": "b702f636-f60c-4a3d-a6f4-f3568c13bd7d",
-            },
-            params=NvidiaSegmentedSTTService.InputParams(language=Language.FR_FR)
+            params=NvidiaSTTService.InputParams(language=Language.EN_US),
         )
 
         return stt
@@ -68,20 +46,19 @@ class PipecatServiceFactory:
         tts = NvidiaTTSService(
             api_key=self.secrets.nvidia_api_key,
             voice_id="Magpie-Multilingual.EN-US.Isabela",  # https://docs.nvidia.com/nim/riva/tts/latest/support-matrix.html
-            params=NvidiaTTSService.InputParams(language=Language.FR_FR, quality=60),
+            params=NvidiaTTSService.InputParams(language=Language.EN_US, quality=60),
         )
 
         return tts
 
-    def create_agent(self) -> NvidiaLLMService:
-        agent = NvidiaLLMService(
-            api_key=self.secrets.nvidia_api_key,
-            model="meta/llama-3.3-70b-instruct",
-        )
+    def create_agent(
+        self, agent: Runnable, state: AgentState, thread_id: str
+    ) -> LangchainProcessor:
+        agent = LangchainProcessor(agent, state, thread_id)
         return agent
 
     def create_context_agg(self):
-        context = LLMContext([{"role": "system", "content": self.config.system_prompt}])
+        context = LLMContext()
         pair = LLMContextAggregatorPair(
             context=context,
             user_params=LLMUserAggregatorParams(
@@ -98,23 +75,9 @@ class PipecatServiceFactory:
                     ],
                 ),
                 user_mute_strategies=[FirstSpeechUserMuteStrategy()],
-                user_idle_timeout=60,
+                user_idle_timeout=120,
             ),
             assistant_params=LLMAssistantAggregatorParams(),
         )
-
-        @pair.user().event_handler("on_user_turn_idle")
-        async def hook_user(aggregator: LLMUserAggregator):
-            await aggregator.push_frame(
-                LLMMessagesAppendFrame(
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": "The user has been idle. Gently remind them you're here to help.",
-                        }
-                    ],
-                    run_llm=True
-                )
-            )
 
         return ContextAggregatorBundle(pair, context)

@@ -1,5 +1,5 @@
 from loguru import logger
-from pipecat.frames.frames import LLMRunFrame
+from pipecat.frames.frames import LLMMessagesAppendFrame, LLMRunFrame
 from pipecat.observers.loggers.metrics_log_observer import MetricsLogObserver
 from pipecat.observers.loggers.transcription_log_observer import (
     TranscriptionLogObserver,
@@ -7,6 +7,7 @@ from pipecat.observers.loggers.transcription_log_observer import (
 from pipecat.observers.user_bot_latency_observer import UserBotLatencyObserver
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
+from pipecat.processors.aggregators.llm_response_universal import LLMUserAggregator
 from pipecat.transports.base_transport import BaseTransport
 
 from app.pipeline.config import BotConfig
@@ -19,7 +20,9 @@ class VoiceBot:
     ):
         self.transport = transport
         self.config = config
-        pipeline, self.context = builder.build(self.transport)
+        pipeline, bundle = builder.build(self.transport)
+        self.context = bundle.context
+        self._user_agg = bundle.pair.user()
         self._total_user_bot_observer = UserBotLatencyObserver()
         self.task = PipelineTask(
             pipeline=pipeline,
@@ -51,6 +54,20 @@ class VoiceBot:
         @self._total_user_bot_observer.event_handler("on_latency_measured")
         async def on_latency_measured(_total_user_bot_observer, latency):
             logger.info(f"Total latency is {latency:.3f}s")
+
+        @self._user_agg.event_handler("on_user_turn_idle")
+        async def on_user_idle(aggregator: LLMUserAggregator):
+            await aggregator.push_frame(
+                LLMMessagesAppendFrame(
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": "The user has been idle. Gently remind them you're here to help.",
+                        }
+                    ],
+                    run_llm=True,
+                )
+            )
 
     async def run(self):
         await PipelineRunner(handle_sigint=False).run(self.task)
