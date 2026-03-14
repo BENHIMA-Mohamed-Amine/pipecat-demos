@@ -1,0 +1,21 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.17.0
+    container_name: qdrant-server
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+    environment:
+      - QDRANT__LOG_LEVEL=INFO
+    networks:
+      - app-network
+
+volumes:
+  qdrant_data:
+
+networks:
+  app-network:
+    driver: bridge
