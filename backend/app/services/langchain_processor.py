@@ -1,4 +1,4 @@
-from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.messages import AIMessage, AIMessageChunk, ToolMessage
 from langchain_core.runnables import Runnable
 from loguru import logger
 from pipecat.frames.frames import (
@@ -8,6 +8,7 @@ from pipecat.frames.frames import (
     LLMFullResponseEndFrame,
     LLMFullResponseStartFrame,
     LLMTextFrame,
+    OutputTransportMessageFrame,
     UserSpeakingFrame,
 )
 from pipecat.metrics.metrics import LLMTokenUsage
@@ -53,39 +54,62 @@ class LangchainProcessor(FrameProcessor):
         first_chunk = True
         try:
             input_data = {"messages": [{"role": "human", "content": text}]}
-            async for chunk in self._agent.astream(
-                input_data, self._agent_config, mode="updates"
+            async for message, metadata in self._agent.astream(
+                input_data, self._agent_config, stream_mode="messages"
             ):
-                for node_name, node_data in chunk.items():
-                    messages = node_data.get("messages", [])
-                    if not messages:
-                        continue
-                    last_message = messages[-1]
+                if isinstance(message, AIMessageChunk) and message.tool_call_chunks:
+                    for chunk in message.tool_call_chunks:
+                        if chunk.get("name"):
+                            logger.info(f"🔧 Tool call: {chunk['name']}")
+                            await self.push_frame(
+                                OutputTransportMessageFrame(
+                                    message={
+                                        "label": "rtvi-ai",
+                                        "type": "server-message",
+                                        "data": {
+                                            "event": "tool-call-start",
+                                            "tool": chunk["name"],
+                                        },
+                                    }
+                                )
+                            )
 
-                    if first_chunk:
+                if isinstance(message, ToolMessage):
+                    logger.info(f"📦 Tool result: {message.content[:100]}")
+                    await self.push_frame(
+                        OutputTransportMessageFrame(
+                            message={
+                                "label": "rtvi-ai",
+                                "type": "server-message",
+                                "data": {
+                                    "event": "tool-call-result",
+                                    "content": message.content[:300],
+                                },
+                            }
+                        )
+                    )
+                    continue
+
+                if isinstance(message, AIMessageChunk):
+                    if first_chunk and message.content:
                         await self.stop_ttfb_metrics()
                         first_chunk = False
 
-                    if isinstance(last_message, ToolMessage):
-                        logger.debug(
-                            f"Tool result from {node_name}: {last_message.content[:100]}"
+                    if message.content:
+                        logger.debug(f"[CHUNK] {repr(message.content)}")
+                        await self.push_frame(LLMTextFrame(message.content))
+
+                    usage = message.usage_metadata
+                    if usage and usage.get("output_tokens"):
+                        tokens = LLMTokenUsage(
+                            prompt_tokens=usage.get("input_tokens", 0),
+                            completion_tokens=usage.get("output_tokens", 0),
+                            total_tokens=usage.get("total_tokens", 0),
                         )
-                        continue
-
-                    if isinstance(last_message, AIMessage):
-                        usage = last_message.usage_metadata
-                        if usage and usage.get("output_tokens"):
-                            tokens = LLMTokenUsage(
-                                prompt_tokens=usage.get("input_tokens", 0),
-                                completion_tokens=usage.get("output_tokens", 0),
-                                total_tokens=usage.get("total_tokens", 0),
-                            )
-                            await self.start_llm_usage_metrics(tokens)
-
-                        if last_message.content:
-                            await self.push_frame(LLMTextFrame(last_message.content))
+                        await self.start_llm_usage_metrics(tokens)
 
         except Exception as e:
+            logger.exception(f"LangchainProcessor error: {e}")
             await self.push_error(error_msg="Unknown error occurred", exception=e)
         finally:
             await self.stop_ttfb_metrics()

@@ -1,0 +1,10 @@
+# Root-level ignores
+blog-post.md
+.ruff_cache/
+
+# Env files at root (e.g. accidentally placed)
+.env
+.env.local
+
+# OS
+.DS_Store

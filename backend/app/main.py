@@ -26,7 +26,7 @@ from app.langchain_agent.retriever_tool import RetrieverTool
 async def lifespan(app: FastAPI):
     try:
         embeddings = NVIDIAEmbeddings(
-            model="nvidia/llama-nemotron-embed-1b-v2",
+            model="nvidia/nv-embedqa-e5-v5",
             api_key=secrets.nvidia_api_key,
         )
         # Initialize the LoadAndIndex class, load documents and create the vector store with indexed documents
@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
         app.state.vector_store = loader.vector_store
         # Initialize the retriever tool with the created vector store and pass it to the agent
         # This allows the agent to use the retriever tool for fetching relevant information from the vector store during conversations
-        retriever_tool = RetrieverTool(vector_store=app.state.vector_store)
+        retriever_tool = RetrieverTool(vector_store=app.state.vector_store, k=5)
         app.state.agent = LangchainAgent(
             secrets, tools=[retriever_tool.retriever_tool]
         ).create()

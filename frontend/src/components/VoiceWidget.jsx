@@ -11,7 +11,7 @@ const styles = `
         position: fixed;
         bottom: 28px;
         right: 28px;
-        width: 420px;
+        width: 520px;
     }
     .voice-fab {
         position: fixed;
@@ -21,7 +21,7 @@ const styles = `
         flex-direction: column;
         align-items: center;
     }
-    @media (max-width: 480px) {
+    @media (max-width: 560px) {
         .voice-widget-container {
             bottom: 0;
             right: 0;
@@ -58,6 +58,19 @@ const styles = `
         align-items: center;
         justify-content: center;
         animation: float 3s ease-in-out infinite, breathe 3s ease-in-out infinite;
+        transition: background 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+    .voice-fab-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        transition: transform 0.5s ease;
+    }
+    .voice-fab-wrapper:hover {
+        transform: scale(1.18);
+    }
+    .voice-fab-wrapper:hover .voice-fab-btn {
+        background: #6057C9;
     }
     .voice-fab-shadow {
         width: 36px;
@@ -67,6 +80,11 @@ const styles = `
         filter: blur(4px);
         animation: shadow-fade 3s ease-in-out infinite;
         margin-top: 8px;
+        transition: all 0.5s ease;
+    }
+    .voice-fab-wrapper:hover .voice-fab-shadow {
+        transform: scaleX(1.35);
+        opacity: 0.5;
     }
 `;
 
@@ -88,12 +106,14 @@ export function VoiceWidget() {
             <>
                 <style>{styles}</style>
                 <div className="voice-fab">
-                    <button onClick={connect} className="voice-fab-btn">
-                        <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
-                            <path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1 13.93A7 7 0 0 1 5 8H3a9 9 0 0 0 8 8.94V20H8v2h8v-2h-3v-3.07A9 9 0 0 0 21 8h-2a7 7 0 0 1-6 6.93z" />
-                        </svg>
-                    </button>
-                    <div className="voice-fab-shadow" />
+                    <div className="voice-fab-wrapper">
+                        <button onClick={connect} className="voice-fab-btn">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
+                                <path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1 13.93A7 7 0 0 1 5 8H3a9 9 0 0 0 8 8.94V20H8v2h8v-2h-3v-3.07A9 9 0 0 0 21 8h-2a7 7 0 0 1-6 6.93z" />
+                            </svg>
+                        </button>
+                        <div className="voice-fab-shadow" />
+                    </div>
                 </div>
             </>
         );
@@ -105,7 +125,7 @@ export function VoiceWidget() {
             <div className="voice-widget-container">
                 <div style={{
                     background: "#1C1C1A",
-                    borderRadius: "clamp(0px, (100vw - 481px) * 9999, 20px) clamp(0px, (100vw - 481px) * 9999, 20px) clamp(0px, (100vw - 481px) * 9999, 20px) clamp(0px, (100vw - 481px) * 9999, 20px)",
+                    borderRadius: "clamp(0px, (100vw - 561px) * 9999, 20px) clamp(0px, (100vw - 561px) * 9999, 20px) clamp(0px, (100vw - 561px) * 9999, 20px) clamp(0px, (100vw - 561px) * 9999, 20px)",
                     border: "0.5px solid #2e2e2b",
                     overflow: "hidden",
                 }}>

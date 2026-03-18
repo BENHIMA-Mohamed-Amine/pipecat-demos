@@ -21,31 +21,17 @@ class LoadAndIndex:
         self._vector_store: QdrantVectorStore | None = None
 
     async def _get_or_create_vector_store(self) -> QdrantVectorStore:
-        try:
-            vector_store = QdrantVectorStore.from_existing_collection(
-                embedding=self._embeddings,
-                collection_name=self.collection_name,
-                url=self.qdrant_url,
-            )
-            logger.info("Existing vector store collection found and loaded.")
-            return vector_store
-        except Exception as e:
-            # check status code if it's a 404, then we know the collection doesn't exist and we can create it
-            if hasattr(e, "status_code") and e.status_code == 404:
-                logger.info(
-                    "Vector store collection not found. Creating new collection..."
-                )
-            else:
-                raise
-            vector_store = await QdrantVectorStore.afrom_documents(
-                documents=self._documents,
-                embedding=self._embeddings,
-                collection_name=self.collection_name,
-                url=self.qdrant_url,
-                prefer_grpc=True,
-            )
-            logger.info("New vector store collection created and indexed.")
-            return vector_store
+        logger.info("Creating vector store collection (recreating if exists)...")
+        vector_store = await QdrantVectorStore.afrom_documents(
+            documents=self._documents,
+            embedding=self._embeddings,
+            collection_name=self.collection_name,
+            url=self.qdrant_url,
+            prefer_grpc=True,
+            force_recreate=True,
+        )
+        logger.info("Vector store collection created and indexed.")
+        return vector_store
 
     async def _load_rag(self) -> list[Document]:
         loader = CSVLoader(file_path=self.file_path)

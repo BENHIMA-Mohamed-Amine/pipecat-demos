@@ -1,4 +1,5 @@
 from langchain_core.runnables import Runnable
+from pipecat.audio.turn.smart_turn.base_smart_turn import SmartTurnParams
 from pipecat.audio.turn.smart_turn.local_smart_turn_v3 import LocalSmartTurnAnalyzerV3
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.processors.aggregators.llm_context import LLMContext
@@ -10,7 +11,6 @@ from pipecat.processors.aggregators.llm_response_universal import (
 from pipecat.services.nvidia.stt import NvidiaSegmentedSTTService, NvidiaSTTService
 from pipecat.services.nvidia.tts import NvidiaTTSService as _NvidiaTTSService
 from pipecat.transcriptions.language import Language
-from pipecat.turns.user_mute import FirstSpeechUserMuteStrategy
 from pipecat.turns.user_start import (
     TranscriptionUserTurnStartStrategy,
     VADUserTurnStartStrategy,
@@ -67,7 +67,9 @@ class PipecatServiceFactory:
                     ],
                     stop=[
                         TurnAnalyzerUserTurnStopStrategy(
-                            turn_analyzer=LocalSmartTurnAnalyzerV3(cpu_count=2)
+                            turn_analyzer=LocalSmartTurnAnalyzerV3(
+                                cpu_count=2, params=SmartTurnParams(stop_secs=1)
+                            )
                         )
                     ],
                 ),

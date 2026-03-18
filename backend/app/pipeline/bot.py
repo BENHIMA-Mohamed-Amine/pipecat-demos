@@ -33,7 +33,11 @@ class VoiceBot:
         self._total_user_bot_observer = UserBotLatencyObserver()
         self._task = PipelineTask(
             pipeline=pipeline,
-            params=PipelineParams(enable_metrics=True, enable_usage_metrics=True, report_only_initial_ttfb=True),
+            params=PipelineParams(
+                enable_metrics=True,
+                enable_usage_metrics=True,
+                report_only_initial_ttfb=True,
+            ),
             rtvi_observer_params=RTVIObserverParams(
                 bot_audio_level_enabled=True,
             ),

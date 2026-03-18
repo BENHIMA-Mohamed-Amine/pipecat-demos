@@ -11,4 +11,11 @@ export const callbacks = {
     //     if (!data.spoken) console.log("🤖 Bot said:", data.text);
     // },
     onError: (error) => console.error("💥 Error:", error),
+    onServerMessage: (data) => {
+        if (data.event === "tool-call-start") {
+            console.log("🔧 Tool call:", data.tool);
+        } else if (data.event === "tool-call-result") {
+            console.log("📦 Tool result:", data.content);
+        }
+    },
 };
